@@ -9,13 +9,13 @@ import java.nio.charset.StandardCharsets;
 public class PasswordEncoder {
 
     public static String encode(String password) {
-        // 生成盐
+        // Generate a salt
         String salt = RandomUtil.randomString(20);
-        // 加密
+        // Encrypt
         return encode(password,salt);
     }
     private static String encode(String password, String salt) {
-        // 加密
+        // Encrypt
         return salt + "@" + DigestUtils.md5DigestAsHex((password + salt).getBytes(StandardCharsets.UTF_8));
     }
     public static Boolean matches(String encodedPassword, String rawPassword) {
@@ -26,9 +26,9 @@ public class PasswordEncoder {
             throw new RuntimeException("密码格式不正确！");
         }
         String[] arr = encodedPassword.split("@");
-        // 获取盐
+        // Get the salt
         String salt = arr[0];
-        // 比较
+        // Compare
         return encodedPassword.equals(encode(rawPassword, salt));
     }
 }

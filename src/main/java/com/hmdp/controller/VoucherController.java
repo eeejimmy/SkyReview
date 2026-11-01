@@ -10,10 +10,10 @@ import javax.annotation.Resource;
 
 /**
  * <p>
- *  前端控制器
+ *  Web controller
  * </p>
  *
- * @author 虎哥
+ * @author Hu Ge
  */
 @RestController
 @RequestMapping("/voucher")
@@ -23,9 +23,9 @@ public class VoucherController {
     private IVoucherService voucherService;
 
     /**
-     * 新增秒杀券
-     * @param voucher 优惠券信息，包含秒杀信息
-     * @return 优惠券id
+     * Add a flash sale voucher
+     * @param voucher Voucher information, including flash sale details
+     * @return Voucher ID
      */
     @PostMapping("seckill")
     public Result addSeckillVoucher(@RequestBody Voucher voucher) {
@@ -34,9 +34,9 @@ public class VoucherController {
     }
 
     /**
-     * 新增普通券
-     * @param voucher 优惠券信息
-     * @return 优惠券id
+     * Add a regular voucher
+     * @param voucher Voucher information
+     * @return Voucher ID
      */
     @PostMapping
     public Result addVoucher(@RequestBody Voucher voucher) {
@@ -46,9 +46,9 @@ public class VoucherController {
 
 
     /**
-     * 查询店铺的优惠券列表
-     * @param shopId 店铺id
-     * @return 优惠券列表
+     * Query the shop's voucher list
+     * @param shopId Shop ID
+     * @return Voucher list
      */
     @GetMapping("/list/{shopId}")
     public Result queryVoucherOfShop(@PathVariable("shopId") Long shopId) {

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * 
  * </p>
  *
- * @author 虎哥
+ * @author Hu Ge
  * @since 2021-12-22
  */
 @Data
@@ -28,78 +28,78 @@ public class Shop implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+     * Primary key
      */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
-     * 商铺名称
+     * Shop name
      */
     private String name;
 
     /**
-     * 商铺类型的id
+     * Shop type ID
      */
     private Long typeId;
 
     /**
-     * 商铺图片，多个图片以','隔开
+     * Shop images, separated by commas
      */
     private String images;
 
     /**
-     * 商圈，例如陆家嘴
+     * Business district, such as Lujiazui
      */
     private String area;
 
     /**
-     * 地址
+     * Address
      */
     private String address;
 
     /**
-     * 经度
+     * Longitude
      */
     private Double x;
 
     /**
-     * 维度
+     * Latitude
      */
     private Double y;
 
     /**
-     * 均价，取整数
+     * Average price, rounded to an integer
      */
     private Long avgPrice;
 
     /**
-     * 销量
+     * Sales volume
      */
     private Integer sold;
 
     /**
-     * 评论数量
+     * Number of comments
      */
     private Integer comments;
 
     /**
-     * 评分，1~5分，乘10保存，避免小数
+     * Rating from 1 to 5, stored multiplied by 10 to avoid decimals
      */
     private Integer score;
 
     /**
-     * 营业时间，例如 10:00-22:00
+     * Opening hours, such as 10:00-22:00
      */
     private String openHours;
 
     /**
-     * 创建时间
+     * Creation time
      */
     private LocalDateTime createTime;
 
     /**
-     * 更新时间
+     * Update time
      */
     private LocalDateTime updateTime;
 

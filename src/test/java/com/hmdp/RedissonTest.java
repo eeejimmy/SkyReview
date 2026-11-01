@@ -26,7 +26,7 @@ class RedissonTest {
 
     @Test
     void method1() throws InterruptedException {
-        // 尝试获取锁
+        // Try to acquire the lock
         boolean isLock = lock.tryLock(1L, TimeUnit.SECONDS);
         if (!isLock) {
             log.error("获取锁失败 .... 1");
@@ -42,7 +42,7 @@ class RedissonTest {
         }
     }
     void method2() {
-        // 尝试获取锁
+        // Try to acquire the lock
         boolean isLock = lock.tryLock();
         if (!isLock) {
             log.error("获取锁失败 .... 2");

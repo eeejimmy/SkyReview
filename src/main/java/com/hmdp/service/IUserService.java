@@ -9,10 +9,10 @@ import javax.servlet.http.HttpSession;
 
 /**
  * <p>
- *  服务类
+ *  Service interface
  * </p>
  *
- * @author 虎哥
+ * @author Hu Ge
  * @since 2021-12-22
  */
 public interface IUserService extends IService<User> {

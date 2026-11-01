@@ -8,10 +8,10 @@ import java.util.List;
 
 /**
  * <p>
- *  Mapper 接口
+ *  Mapper interface
  * </p>
  *
- * @author 虎哥
+ * @author Hu Ge
  * @since 2021-12-22
  */
 public interface VoucherMapper extends BaseMapper<Voucher> {

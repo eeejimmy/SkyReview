@@ -3,14 +3,14 @@ package com.hmdp.utils;
 public interface ILock {
 
     /**
-     * 尝试获取锁
-     * @param timeoutSec 锁持有的超时时间，过期后自动释放
-     * @return true代表获取锁成功; false代表获取锁失败
+     * Try to acquire the lock
+     * @param timeoutSec Lock timeout in seconds; automatically released on expiry
+     * @return true if the lock was acquired; false otherwise
      */
     boolean tryLock(long timeoutSec);
 
     /**
-     * 释放锁
+     * Release the lock
      */
     void unlock();
 }

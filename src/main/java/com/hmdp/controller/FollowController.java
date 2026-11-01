@@ -9,10 +9,10 @@ import javax.annotation.Resource;
 
 /**
  * <p>
- * 前端控制器
+ * Web controller
  * </p>
  *
- * @author 虎哥
+ * @author Hu Ge
  */
 @RestController
 @RequestMapping("/follow")

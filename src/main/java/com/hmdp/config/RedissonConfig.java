@@ -11,10 +11,10 @@ public class RedissonConfig {
 
     @Bean
     public RedissonClient redissonClient(){
-        // 配置
+        // Configuration
         Config config = new Config();
         config.useSingleServer().setAddress("redis://192.168.150.101:6379").setPassword("123321");
-        // 创建RedissonClient对象
+        // Create the RedissonClient instance
         return Redisson.create(config);
     }
 }

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * 
  * </p>
  *
- * @author 虎哥
+ * @author Hu Ge
  * @since 2021-12-22
  */
 @Data
@@ -28,66 +28,66 @@ public class Blog implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+     * Primary key
      */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
     /**
-     * 商户id
+     * Merchant ID
      */
     private Long shopId;
     /**
-     * 用户id
+     * User ID
      */
     private Long userId;
     /**
-     * 用户图标
+     * User icon
      */
     @TableField(exist = false)
     private String icon;
     /**
-     * 用户姓名
+     * User name
      */
     @TableField(exist = false)
     private String name;
     /**
-     * 是否点赞过了
+     * Whether the user has liked the post
      */
     @TableField(exist = false)
     private Boolean isLike;
 
     /**
-     * 标题
+     * Title
      */
     private String title;
 
     /**
-     * 探店的照片，最多9张，多张以","隔开
+     * Review photos, up to 9, separated by commas
      */
     private String images;
 
     /**
-     * 探店的文字描述
+     * Review text
      */
     private String content;
 
     /**
-     * 点赞数量
+     * Number of likes
      */
     private Integer liked;
 
     /**
-     * 评论数量
+     * Number of comments
      */
     private Integer comments;
 
     /**
-     * 创建时间
+     * Creation time
      */
     private LocalDateTime createTime;
 
     /**
-     * 更新时间
+     * Update time
      */
     private LocalDateTime updateTime;
 
