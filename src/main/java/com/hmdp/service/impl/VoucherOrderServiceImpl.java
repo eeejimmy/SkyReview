@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.VoucherOrder;
 import com.hmdp.mapper.VoucherOrderMapper;
-import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherOrderService;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
@@ -17,6 +16,8 @@ import org.springframework.data.redis.connection.stream.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import javax.annotation.PreDestroy;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
@@ -40,7 +41,7 @@ import java.util.concurrent.Executors;
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
 
     @Resource
-    private ISeckillVoucherService seckillVoucherService;
+    private VoucherOrderPersistenceService persistenceService;
 
     @Resource
     private RedisIdWorker redisIdWorker;
@@ -58,22 +59,45 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     }
 
 
-    private static final ExecutorService SECKILL_ORDER_EXECUTOR = Executors.newSingleThreadExecutor();
+    @Value("${hmdp.orders.consumer:c${server.port:8081}}")
+    private String consumerName;
+
+    @Value("${hmdp.orders.retry-delay-ms:5000}")
+    private long retryDelayMs;
+
+    private final ExecutorService orderExecutor = Executors.newSingleThreadExecutor();
+
+    @PreDestroy
+    public void stopConsumer() {
+        orderExecutor.shutdownNow();
+    }
+
+    private boolean waitBeforeRetry() {
+        try {
+            Thread.sleep(Math.max(100L, retryDelayMs));
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
 
     @PostConstruct
     private void init() {
-        SECKILL_ORDER_EXECUTOR.submit(new VoucherOrderHandler());
+        orderExecutor.submit(new VoucherOrderHandler());
     }
 
     private class VoucherOrderHandler implements Runnable {
 
         @Override
         public void run() {
-            while (true) {
+            // Recover this consumer's unacknowledged messages before reading new ones.
+            handlePendingList();
+            while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    // 1.Read orders from the stream: XREADGROUP GROUP g1 c1 COUNT 1 BLOCK 2000 STREAMS s1 >
+                    // Read new messages for this consumer from stream.orders.
                     List<MapRecord<String, Object, Object>> list = stringRedisTemplate.opsForStream().read(
-                            Consumer.from("g1", "c1"),
+                            Consumer.from("g1", consumerName),
                             StreamReadOptions.empty().count(1).block(Duration.ofSeconds(2)),
                             StreamOffset.create("stream.orders", ReadOffset.lastConsumed())
                     );
@@ -89,20 +113,21 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     // 3.Create the order
                     createVoucherOrder(voucherOrder);
                     // 4.Acknowledge the message: XACK
-                    stringRedisTemplate.opsForStream().acknowledge("s1", "g1", record.getId());
+                    stringRedisTemplate.opsForStream().acknowledge("stream.orders", "g1", record.getId());
                 } catch (Exception e) {
                     log.error("处理订单异常", e);
+                    if (!waitBeforeRetry()) { return; }
                     handlePendingList();
                 }
             }
         }
 
         private void handlePendingList() {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    // 1.Read pending orders: XREADGROUP GROUP g1 c1 COUNT 1 BLOCK 2000 STREAMS s1 0
+                    // Read this consumer's pending messages from stream.orders.
                     List<MapRecord<String, Object, Object>> list = stringRedisTemplate.opsForStream().read(
-                            Consumer.from("g1", "c1"),
+                            Consumer.from("g1", consumerName),
                             StreamReadOptions.empty().count(1),
                             StreamOffset.create("stream.orders", ReadOffset.from("0"))
                     );
@@ -118,9 +143,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     // 3.Create the order
                     createVoucherOrder(voucherOrder);
                     // 4.Acknowledge the message: XACK
-                    stringRedisTemplate.opsForStream().acknowledge("s1", "g1", record.getId());
+                    stringRedisTemplate.opsForStream().acknowledge("stream.orders", "g1", record.getId());
                 } catch (Exception e) {
                     log.error("处理订单异常", e);
+                    if (!waitBeforeRetry()) { return; }
                 }
             }
         }
@@ -145,45 +171,16 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     }*/
 
     private void createVoucherOrder(VoucherOrder voucherOrder) {
-        Long userId = voucherOrder.getUserId();
-        Long voucherId = voucherOrder.getVoucherId();
-        // Create the lock object
-        RLock redisLock = redissonClient.getLock("lock:order:" + userId);
-        // Try to acquire the lock
-        boolean isLock = redisLock.tryLock();
-        // Check the result
-        if (!isLock) {
-            // Lock acquisition failed; return failure or retry
-            log.error("不允许重复下单！");
-            return;
+        RLock lock = redissonClient.getLock("lock:order:" + voucherOrder.getUserId());
+        if (!lock.tryLock()) {
+            // Throw so the caller does not ACK an unprocessed message.
+            throw new IllegalStateException("Order lock unavailable; retry later");
         }
-
         try {
-            // 5.1.Query orders
-            int count = query().eq("user_id", userId).eq("voucher_id", voucherId).count();
-            // 5.2.Check whether it exists
-            if (count > 0) {
-                // The user has already purchased this voucher
-                log.error("不允许重复下单！");
-                return;
-            }
-
-            // 6.Deduct stock
-            boolean success = seckillVoucherService.update()
-                    .setSql("stock = stock - 1") // set stock = stock - 1
-                    .eq("voucher_id", voucherId).gt("stock", 0) // where id = ? and stock > 0
-                    .update();
-            if (!success) {
-                // Stock deduction failed
-                log.error("库存不足！");
-                return;
-            }
-
-            // 7.Create the order
-            save(voucherOrder);
+            // Separate Spring bean: transaction commits before returning and before ACK.
+            persistenceService.persist(voucherOrder);
         } finally {
-            // Release the lock
-            redisLock.unlock();
+            lock.unlock();
         }
     }
 
